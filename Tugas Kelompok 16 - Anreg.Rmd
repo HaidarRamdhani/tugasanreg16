@@ -1,0 +1,278 @@
+---
+title: "Analisis Regresi Kelompok 16"
+author: "Haidar Ramdhani"
+date: "2024-02-11"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read Data 
+
+Data yang digunakan adalah data Tingkat Bunuh Diri dan Harapan Hidup
+yang diperoleh dari link berikut
+<https://www.kaggle.com/datasets/marshuu/suicide-rate-and-life-expectancy>
+
+```{r}
+data.a <- read.csv("D:\\Campss\\Season 4\\Anreg\\P3\\archive (9)\\Life expectancy.csv")
+data.b <- read.csv("D:\\Campss\\Season 4\\Anreg\\P3\\archive (9)\\Suicide Rate.csv")
+
+data <- merge(data.a, data.b, by = "Country")
+
+datset <- data[,c(1,4,7)]
+y <- datset$Suicide.rate
+x <- datset$Happiness.Score
+n <- nrow(datset)
+
+```
+
+#### Statistik lima serangkai peubah x dan y
+
+```{r}
+summary(x)
+summary(y)
+```
+
+## Persamaan Regresi Linear Sederhana
+
+```{r}
+model <- lm(formula=y~x, data = datset)
+summary(model)
+```
+
+```{r}
+b0 <- model$coefficients[[1]]
+b1 <- model$coefficients[[2]]
+
+b0;b1
+```
+
+Berdasarkan perhitungan dari fungsi tersebut, diperoleh dugaan persamaan
+regresi linear atau nilai harapan dari peubah respons Y sebagai berikut.
+$$
+\hat{E[Y]} = \hat{Y} = \beta_1X + \beta_0 \\
+\hat{E[Y]} = \hat{Y} = 0.05711204X + 15.52831
+$$ **Interpretasi Persamaan:**
+
+1\. Jika angka kebahagiaan di suatu negara bernilai 0, maka rata-rata
+masih terdapat kasus bunuh diri dengan angka 15.52831 yang dapat terjadi
+karena faktor lain 2. Jika angka kebahagiaan di suatu negara meningkat 1
+satuan, maka rata-rata angka kasus bunuh diri akan meningkat sebesar
+0.05711204
+
+## Scatter Plot 
+
+Melalui scatter plot untuk regresi linear sederhana ini, akan diduga
+angka bunuh diri terhadap angka kebahagiaan di dunia, sehingga angka
+bunuh diri dideklarasikan sebagai y dan angka kebahagiaan sebagai x.
+
+```{r}
+ybar <- mean(y)
+
+{plot(x,y, pch = 16, col = "blue", 
+      xlab = "Angka Kebahagiaan", 
+      ylab = "Angka Bunuh Diri", 
+      main = "Prediksi Pengaruh Angka Kebahagiaan terhadap Angka Bunuh Diri")
+abline(model, col="red", lwd = 1.5)
+abline(h=ybar, col="green", lwd = 1.5)
+text(x = 3.8, y = 17, "y bar", col = "green", cex = 0.7)
+text(x = 7.2, y = 17, "y duga", col = "red", cex = 0.7)
+}
+```
+
+Pada plot tersebut, garis merah adalah garis persamaan regresi sementara
+garis hijau adalah garis dari rataan nilai y (angka bunuh diri).
+Terlihat bahwa titik-titik koordinat tersebar, jauh dari garis regresi.
+Hal ini menandakan bahwa galatnya besar.
+
+## ANOVA
+
+```{r}
+anova_model <- anova(model)
+anova_model
+```
+
+#### Inisialisasi nilai y dugaan
+
+```{r}
+y_duga <- 0
+for (i in 1:length(y)){
+  y_duga[i] <-  b1*x[i] + b0
+}
+y_duga
+```
+
+$$
+JKR = \sum_{i=1}^{n}(\hat{y}_i - \bar{y})^2 \\
+JKT = \sum_{i=1}^{n}(y_i - \bar{y})^2 \\
+JKG = \sum_{i=1}^{n}(y_i - \hat{y}_i)^2
+$$
+
+```{r}
+JKR <- 0
+JKT <- 0
+JKG <- 0
+
+for (i in 1:length(y)){
+  JKR <-  JKR + (y_duga[i] - ybar)^2
+  JKT <-  JKT + (y[i] - ybar)^2
+  JKG <- JKG + (y[i] - y_duga[i])^2
+}
+JK_num <- c(JKR, JKT, JKG)
+JK <- c("JKR", "JKT", "JKG")
+data.frame(JK, JK_num)
+```
+
+Melalui perhitungan tersebut, diperoleh nilai JKR, JKT, dan JKG dengan
+nilai di atas.
+
+#### Koefisien Determinasi
+
+$$
+R^2 = \frac{JKR}{JKT} 
+$$
+
+```{r}
+Rsq <- JKR/JKT
+Rsq
+```
+
+Koefisien determinasinya adalah 0,0001284248 atau sekitar 0.012%. Angka
+ini sangat kecil, mengindikasikan bahwa terdapat hubungan yang sangat
+kecil antara angka kebahagiaan dengan angka bunuh diri di dunia.
+
+#### Pendugaan Parameter b0 dan b1 $$
+KTR = \frac{JKT}{1}; \ \ KTG = \frac{JKG}{n-2}\\
+S_{xx} = \sum_{i=1}^{n}(x_i - \bar x)^2\\
+S_e^2 =KTG; \ \ S^2_{\beta_1} = \frac{S_e^2}{S_{xx}}; \ \ S^2_{\beta_0} = \frac{S^2_e\sum_{i=1}^{n}x_i^2}{n\sum(x_i - \bar x)^2}
+$$
+
+```{r}
+KTR <- JKT
+KTG <- JKG/(n-2)
+Se_sq <- KTG
+
+xbar <- mean(x)
+
+Sxx <- 0
+sum_x_sq <-0
+for (i in 1:length(x)){
+  Sxx <- Sxx + (x[i] - xbar)^2
+  sum_x_sq <- sum_x_sq + (x[i])^2
+}
+
+
+Sb1_sq <- Se_sq/Sxx
+Sb0_sq <- (Se_sq*sum_x_sq)/(n*Sxx)
+
+Sb1_sq;Sb0_sq
+```
+
+$$
+Uji \ Hipotesis \ \beta_1 \\
+H_0 : \beta_1 =  0 \\
+H_1 : \beta_1 \neq 0\\
+$$
+
+$$
+t = \frac{b_1 - \beta_1}{S_{b_1}}
+$$
+
+```{r}
+alpha <- 0.05
+thit_b1 <- (b1 - 0)/sqrt(Sb1_sq)
+ttab_b1 <- abs(qt(alpha/2,n-2))
+
+thit_b1;ttab_b1
+
+```
+
+t hitung \< \|t tabel\|, maka terima H0. Tidak terdapat cukup bukti
+untuk menyatakan bahwa b1 tidak sama dengan 0.
+
+$$
+Uji \ Hipotesis \ \beta_0 \\
+H_0 : \beta_0 =  0 \\
+H_1 : \beta_0 \neq 0\\
+$$ $$
+t = \frac{b_0 - \beta_0}{S_{b_0}}
+$$
+
+```{r}
+thit_b0 <- (b0 - 0)/sqrt(Sb0_sq)
+ttab_b0 <- abs(qt(alpha/2,n-2))
+
+thit_b0;ttab_b0
+print("t hitung > t tabel, maka tolak H0")
+```
+
+t hitung \> \|t tabel\|, maka tolak H0. Terdapat cukup bukti untuk
+menyatakan bahwa nilai b0 tidak sama dengan 0.
+
+## Selang Kepercayaan Parameter 
+
+$$
+\hat{\beta_0} \ - \ t_{(n-2, \frac{\alpha}{2})} \times S_{\hat{\beta_0}} \ < \hat{\beta_0} < \hat{\beta_0} \ + \ t_{(n-2, \frac{\alpha}{2})} \times S_{\hat{\beta_0}}
+\\
+\hat{\beta_1} \ - \ t_{(n-2, \frac{\alpha}{2})} \times S_{\hat{\beta_1}} \ < \hat{\beta_1} < \hat{\beta_1} \ + \ t_{(n-2, \frac{\alpha}{2})} \times S_{\hat{\beta_1}}
+$$
+
+```{r}
+low_b0 <- b0 - ttab_b0*sqrt(Sb0_sq)
+up_b0 <- b0 + ttab_b0*sqrt(Sb0_sq)
+
+
+low_b1 <- b1 - ttab_b1*sqrt(Sb1_sq)
+up_b1 <- b1 + ttab_b1*sqrt(Sb1_sq)
+
+
+Koefisien <- c("b0","b1")
+`Batas Bawah` <- c(low_b0, low_b1)
+`Batas Atas` <- c(up_b0, up_b1)
+
+data.frame(Koefisien,`Batas Bawah`,`Batas Atas`)
+
+```
+
+Dapat disimpulkan bahwa dalam taraf kepercayaan 95%, diyakini dugaan
+parameter b0 duga berada dalam selang 10.5593469 hingga 20.4972689,
+sementara parameter b1 duga berada dalam selang -0.8172947 hingga
+0.9315187.
+
+## Selang Kepercayaan Rataan (Nilai Harapan) Amatan 
+
+$$
+E(\hat{Y}|x_0) \ {\pm} \ t_{(n-2;\frac{\alpha}{2})}s_e\sqrt{[\frac{1}{n} + \frac{(x_i-\bar x)^2}{\sum^n_{i=1}(x_i - \bar x)^2}]}
+$$ Misalkan akan diduga nilai rataan harapan ketika angka kebahagiaan
+(x) = 5.
+
+```{r}
+x.diduga <- data.frame(x=5)
+predict(model, x.diduga, interval = "confidence")
+```
+
+Berdasarkan hasil fungsi tersebut, diketahui dugaan rataan angka bunuh
+diri (Y) ketika x = 5 adalah 15.81387. Diyakini juga dalam taraf
+kepercayaan 95%, nilai dugaan rataan Y ketika x = 5 berada dalam selang
+14.74409 hingga 16.88364.
+
+## Selang Kepercayaan Individu Amatan 
+
+$$
+\hat{y}(x_i) \ {\pm} \ t_{(n-2;\frac{\alpha}{2})}s_e\sqrt{[1+\frac{1}{n} + \frac{(x_i-\bar x)^2}{\sum^n_{i=1}(x_i - \bar x)^2}]}
+$$ Misalkan akan diduga nilai individu amatan saat angka kebahagiaan (x)
+= 5.
+
+```{r}
+predict(model, x.diduga, interval = "prediction")
+```
+
+Berdasarkan hasil fungsi tersebut, diketahui dugaan nilai individu Y
+(angka bunuh diri) ketika x (angka kebahagiaan) = 5 adalah 15.81387.
+Diyakini juga dalam taraf kepercayaan 95%, nilai amatan individu Y
+ketika x = 5 berada dalam selang 4.937093 hingga 26.69064.
